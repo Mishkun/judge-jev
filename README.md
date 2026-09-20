@@ -8,6 +8,9 @@ parsing, thresholds, labels, and all user-visible formatting.
 The OpenRouter and TypeSafe research behind the request/response contract is in
 [`docs/jev-api.md`](docs/jev-api.md).
 
+- Telegram: [@judge_jev_bot](https://t.me/judge_jev_bot)
+- Worker: <https://judge-jev.mishkun-lev.workers.dev>
+
 ## User experience
 
 The bot is a **Guest Mode** bot. A user summons it in a chat by mentioning it

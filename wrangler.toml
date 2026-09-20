@@ -1,0 +1,9 @@
+name = "judge-jev"
+main = "src/index.ts"
+compatibility_date = "2026-09-20"
+workers_dev = true
+
+# Secrets are deliberately not stored in this file. Set them with:
+# npx wrangler secret put JEV_OPENROUTER_TOKEN
+# npx wrangler secret put TELEGRAM_BOT_TOKEN
+# npx wrangler secret put TELEGRAM_WEBHOOK_SECRET

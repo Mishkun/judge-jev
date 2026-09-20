@@ -46,6 +46,21 @@ describe('command parsing and pure command construction', () => {
     });
   });
 
+  it('parses a Guest Mode leading mention before the command', () => {
+    expect(parseCommand('@judge_jev_bot /is_this_true')).toEqual({ kind: 'is_this_true' });
+    expect(parseCommand('@judge_jev_bot /judge оцени: кринж, кайф')).toEqual({
+      kind: 'judge',
+      prompt: 'оцени: кринж, кайф',
+    });
+  });
+
+  it('uses plain mentioned text as the default judge prompt', () => {
+    expect(parseCommand('@judge_jev_bot оцени: кринж, кайф')).toEqual({
+      kind: 'judge',
+      prompt: 'оцени: кринж, кайф',
+    });
+  });
+
   it('takes only replied-to text, preferring text over caption', () => {
     expect(extractTargetText(updateWithTarget({ text: 'текст', caption: 'подпись' }))).toBe(
       'текст',
@@ -158,7 +173,7 @@ describe('command parsing and pure command construction', () => {
       : {})).toEqual(['c_0', 'c_1']);
   });
 
-  it('prints extracted buckets and every final probability without an X claim', () => {
+  it('sorts probabilities, bolds only the winner, and omits result metadata', () => {
     const candidates = tokenizeJudgeCandidates('кринж кайф');
     const answer = {
       type: 'choice' as const,
@@ -167,14 +182,13 @@ describe('command parsing and pure command construction', () => {
     };
     const built = buildJudgeChoiceRequest('текст', 'кринж или кайф', candidates);
     const formatted = formatJudgeAnswer(candidates, answer, built.mapping);
-    expect(formatted).toContain('Извлечённые бакеты: кринж, кайф');
-    expect(formatted).toContain('кринж: 0.25');
-    expect(formatted).toContain('кайф: 0.75');
-    expect(formatted).not.toContain('X:');
+    expect(formatted).toBe('<b>кайф: 0.75</b>\nкринж: 0.25');
+    expect(formatted).not.toContain('Результат:');
+    expect(formatted).not.toContain('Извлечённые бакеты:');
   });
 
-  it('formats Noul as complementary true/false display probabilities', () => {
+  it('sorts and bolds complementary true/false probabilities', () => {
     const answer: NoulAnswer = { type: 'noul', noul: 0.73 };
-    expect(formatTruthAnswer(answer)).toBe('Вероятности:\ntrue: 0.73\nfalse: 0.27');
+    expect(formatTruthAnswer(answer)).toBe('<b>true: 0.73</b>\nfalse: 0.27');
   });
 });

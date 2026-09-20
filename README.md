@@ -17,19 +17,25 @@ in a command or replying to a message from it. The Worker receives one
 `text` or `caption`; it does not fetch chat history or inspect unrelated
 messages.
 
-Commands may include Telegram's bot mention suffix (`/judge@my_bot ...`).
+The default Guest Mode syntax is a leading mention followed by a free-form
+judgment request, for example `@judge_jev_bot оцени: кринж, кайф или жесть`.
+This is equivalent to `/judge`. Explicit commands and conventional command
+suffixes such as `/judge@judge_jev_bot ...` are accepted too.
 
 ### `/is_this_true`
 
-Reply to a text message and send `/is_this_true`. The Worker sends one Noul
+Reply to a text message and send `@judge_jev_bot /is_this_true`. The Worker sends one Noul
 question and displays the model's yes probability as `true` and its
 complement as `false`:
 
 ```text
-Вероятности:
-true: 0.73
+**true: 0.73**
 false: 0.27
 ```
+
+Every command sorts options by descending probability and bolds only the top
+option. Telegram renders the bold line; no result or probability heading is
+included.
 
 This is a calibrated model probability, not a proof or a guarantee for one
 message.
@@ -40,21 +46,21 @@ Reply to a text or media caption and provide a closed set of options separated
 by `|`:
 
 ```text
-/classify факт | мнение
+@judge_jev_bot /classify факт | мнение
 ```
 
 The model sees opaque labels (`c_0`, `c_1`), while the Worker maps the answer
 back to the exact local option text and prints all Choice probabilities. Empty,
 duplicate, or more-than-16 options are rejected.
 
-### `/judge <request>`
+### Default: `/judge <request>`
 
 Reply to a message and write a free-form classification request. The possible
 bucket/category/scale words come from the request itself, not from the replied
 text:
 
 ```text
-/judge оцени: кринж, кайф или жесть
+@judge_jev_bot оцени: кринж, кайф или жесть
 ```
 
 The Worker:
@@ -190,7 +196,7 @@ Telegram will then send the exact relevant shape:
   "update_id": 42,
   "guest_message": {
     "guest_query_id": "…",
-    "text": "/judge оцени: кринж, кайф или жесть",
+    "text": "@judge_jev_bot /judge оцени: кринж, кайф или жесть",
     "reply_to_message": { "text": "это очень спорно" }
   }
 }
@@ -254,7 +260,7 @@ options such as `/classify кринж | кайф | жесть`.
 * No database or long-term conversation memory is used. Guest Mode does not
   grant chat history, and the Worker reads only the single replied message.
 * Input, command, option, candidate, request-body, and outgoing-message lengths
-  are capped. `/judge` batches at most 32 prompt candidates and keeps the
+  are capped. `/judge` batches at most 64 prompt candidates and keeps the
   serialized Decisions request under a conservative byte budget. Choice options
   use opaque code-owned IDs; arbitrary model text is never parsed into a label.
 * Jev's calibration is a population-level property. Thresholds, including the

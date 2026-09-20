@@ -30,7 +30,7 @@ describe('Telegram Guest Mode boundary', () => {
         type: 'article',
         id: 'jev-answer',
         title: 'Jev',
-        input_message_content: { message_text: 'answer' },
+        input_message_content: { message_text: 'answer', parse_mode: 'HTML' },
       },
     });
   });

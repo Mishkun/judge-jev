@@ -28,6 +28,7 @@ export interface InlineQueryResultArticle {
   title: string;
   input_message_content: {
     message_text: string;
+    parse_mode: 'HTML';
   };
 }
 
@@ -103,6 +104,7 @@ export function createGuestAnswerPayload(
       title: 'Jev',
       input_message_content: {
         message_text: truncateMessage(answer),
+        parse_mode: 'HTML',
       },
     },
   };

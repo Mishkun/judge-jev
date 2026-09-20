@@ -112,7 +112,7 @@ describe('Worker HTTP boundary', () => {
     expect(
       (telegramBody.result as { input_message_content: { message_text: string } })
         .input_message_content.message_text,
-    ).toContain('true: 0.73');
+    ).toContain('<b>true: 0.73</b>');
   });
 
   it('uses a replied caption as the only classify target and maps opaque IDs back', async () => {
@@ -173,7 +173,7 @@ describe('Worker HTTP boundary', () => {
 
     await handleRequest(
       webhookRequest(
-        guestUpdate('/judge оцени: кринж, кайф или жесть', { text: 'это очень спорно' }),
+        guestUpdate('@judge_jev_bot оцени: кринж, кайф или жесть', { text: 'это очень спорно' }),
       ),
       env,
     );
@@ -213,13 +213,11 @@ describe('Worker HTTP boundary', () => {
     const telegramBody = JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body)) as {
       result: { input_message_content: { message_text: string } };
     };
-    expect(telegramBody.result.input_message_content.message_text).toContain(
-      'Извлечённые бакеты: кринж, кайф, жесть',
+    expect(telegramBody.result.input_message_content.message_text).toBe(
+      '<b>кайф: 0.5</b>\nжесть: 0.3\nкринж: 0.2',
     );
-    expect(telegramBody.result.input_message_content.message_text).toContain('кринж: 0.2');
-    expect(telegramBody.result.input_message_content.message_text).toContain('кайф: 0.5');
-    expect(telegramBody.result.input_message_content.message_text).toContain('жесть: 0.3');
-    expect(telegramBody.result.input_message_content.message_text).not.toContain('X:');
+    expect(telegramBody.result.input_message_content.message_text).not.toContain('Результат:');
+    expect(telegramBody.result.input_message_content.message_text).not.toContain('Извлечённые бакеты:');
   });
 
   it('uses the one-bucket plus explicit negation Choice shape', async () => {

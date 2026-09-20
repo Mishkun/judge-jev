@@ -61,9 +61,19 @@ function cleanOption(value: string): string {
 
 /** Parse Telegram's optional @bot mention without making it part of an argument. */
 export function parseCommand(input: string): ParsedCommand | null {
-  const source = input.trim();
-  if (source.length === 0 || Array.from(source).length > MAX_COMMAND_CHARS) {
+  const rawSource = input.trim();
+  // Guest Mode is summoned with a leading mention (`@bot /judge ...`).
+  // Conventional group commands may instead use `/judge@bot ...`.
+  const source = rawSource.replace(/^@[a-z0-9_]{1,32}[\t\n\r ]+/i, '');
+  if (source.length === 0 || Array.from(rawSource).length > MAX_COMMAND_CHARS) {
     return null;
+  }
+
+  // A plain Guest Mode mention is the default `/judge` UX.
+  if (!source.startsWith('/')) {
+    return Array.from(source).length <= MAX_PROMPT_CHARS
+      ? { kind: 'judge', prompt: truncateText(source, MAX_PROMPT_CHARS) }
+      : null;
   }
 
   const match = /^\/([a-z0-9_]+)(?:@[a-z0-9_]{1,32})?(?:[\t\n\r ]+([\s\S]*))?$/i.exec(
@@ -458,27 +468,41 @@ function formatProbability(value: number): string {
   return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function formatRankedProbabilities(entries: Array<{ label: string; probability: number }>): string {
+  return entries
+    .map((entry, index) => ({ ...entry, index }))
+    .sort((left, right) => right.probability - left.probability || left.index - right.index)
+    .map((entry, index) => {
+      const line = `${escapeHtml(entry.label)}: ${formatProbability(entry.probability)}`;
+      return index === 0 ? `<b>${line}</b>` : line;
+    })
+    .join('\n');
+}
+
 export function formatTruthAnswer(answer: NoulAnswer): string {
-  return [
-    'Вероятности:',
-    `true: ${formatProbability(answer.noul)}`,
-    `false: ${formatProbability(1 - answer.noul)}`,
-  ].join('\n');
+  return formatRankedProbabilities([
+    { label: 'true', probability: answer.noul },
+    { label: 'false', probability: 1 - answer.noul },
+  ]);
 }
 
 export function formatChoiceAnswer(
   answer: ChoiceAnswer,
   mapping: OpaqueChoiceMapping,
-  heading = 'Результат',
 ): string {
-  const selected = mapping.values[answer.choice] ?? 'неизвестный вариант';
-  const lines = [`${heading}: ${selected}`, 'Вероятности:'];
-  for (const id of mapping.ids) {
-    const value = mapping.values[id];
-    const probability = answer.probabilities?.[id];
-    lines.push(`${value}: ${formatProbability(probability ?? 0)}`);
-  }
-  return lines.join('\n');
+  return formatRankedProbabilities(
+    mapping.ids.map((id) => ({
+      label: mapping.values[id] ?? 'неизвестный вариант',
+      probability: answer.probabilities?.[id] ?? 0,
+    })),
+  );
 }
 
 export function formatJudgeAnswer(
@@ -486,18 +510,8 @@ export function formatJudgeAnswer(
   answer: ChoiceAnswer,
   mapping: OpaqueChoiceMapping,
 ): string {
-  const candidates = Array.isArray(selectedCandidates)
-    ? selectedCandidates
-    : [selectedCandidates];
-  const extractedBuckets = candidates.map((candidate) => candidate.text).join(', ');
-  const selected = mapping.values[answer.choice] ?? 'неизвестный вариант';
-  const lines = [`Извлечённые бакеты: ${extractedBuckets}`, `Результат: ${selected}`, 'Вероятности:'];
-  for (const id of mapping.ids) {
-    const value = mapping.values[id];
-    const probability = answer.probabilities?.[id];
-    lines.push(`${value}: ${formatProbability(probability ?? 0)}`);
-  }
-  return lines.join('\n');
+  void selectedCandidates;
+  return formatChoiceAnswer(answer, mapping);
 }
 
 export function readJudgeNoulProbability(

@@ -3,6 +3,7 @@ import {
   buildJudgeChoiceRequest,
   buildJudgeNoulRequest,
   buildTruthRequest,
+  extractExplicitJudgeBuckets,
   extractTargetText,
   formatChoiceAnswer,
   formatJudgeAnswer,
@@ -75,6 +76,17 @@ async function executeCommand(
 
   // `/judge` extracts possible bucket names from its free-form request. The
   // replied message is classified only after the requested buckets are known.
+  const explicitBuckets = extractExplicitJudgeBuckets(command.prompt);
+  if (explicitBuckets) {
+    const builtChoice = buildJudgeChoiceRequest(targetText, command.prompt, explicitBuckets);
+    const choiceResponse = await evaluateJevDecisions(openRouterToken, builtChoice.request);
+    return formatJudgeAnswer(
+      explicitBuckets,
+      getChoiceAnswer(choiceResponse, 'bucket'),
+      builtChoice.mapping,
+    );
+  }
+
   const candidates = tokenizeJudgeCandidates(command.prompt);
   if (candidates.length === 0) {
     return NO_CANDIDATES_TEXT;

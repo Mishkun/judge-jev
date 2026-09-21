@@ -220,6 +220,42 @@ describe('Worker HTTP boundary', () => {
     expect(telegramBody.result.input_message_content.message_text).not.toContain('Извлечённые бакеты:');
   });
 
+  it('uses explicit pipe buckets directly without a Jev extraction call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    fetchMock
+      .mockResolvedValueOnce(
+        openRouterResponse({
+          bucket: {
+            type: 'choice',
+            choice: 'c_1',
+            probabilities: { c_0: 0.15, c_1: 0.85 },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(telegramResponse());
+
+    await handleRequest(
+      webhookRequest(
+        guestUpdate('@judge_jev_bot оцени: полный кринж | абсолютный кайф', {
+          text: 'очень хорошо',
+        }),
+      ),
+      env,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const body = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as {
+      questions: Record<string, { type: string; criteria: Record<string, { bucket: string }> }>;
+    };
+    expect(Object.keys(body.questions)).toEqual(['bucket']);
+    expect(body.questions.bucket?.type).toBe('choice');
+    expect(body.questions.bucket?.criteria).toEqual({
+      c_0: expect.objectContaining({ bucket: 'полный кринж' }),
+      c_1: expect.objectContaining({ bucket: 'абсолютный кайф' }),
+    });
+  });
+
   it('uses the one-bucket plus explicit negation Choice shape', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

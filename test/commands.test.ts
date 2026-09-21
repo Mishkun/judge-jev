@@ -5,6 +5,7 @@ import {
   buildJudgeNoulRequest,
   buildTruthRequest,
   extractTargetText,
+  extractExplicitJudgeBuckets,
   formatJudgeAnswer,
   formatTruthAnswer,
   MAX_JUDGE_CANDIDATES,
@@ -100,6 +101,34 @@ describe('command parsing and pure command construction', () => {
     const candidates = tokenizeJudgeCandidates('Кот дом кот');
     expect(candidates.map((candidate) => candidate.text)).toEqual(['Кот', 'дом']);
     expect(candidates[0]?.start).toBe(0);
+  });
+
+  it('extracts explicit pipe buckets including multi-word labels', () => {
+    expect(
+      extractExplicitJudgeBuckets('оцени: полный кринж | абсолютный кайф | просто жесть')?.map(
+        ({ text }) => text,
+      ),
+    ).toEqual(['полный кринж', 'абсолютный кайф', 'просто жесть']);
+  });
+
+  it('extracts dash, numeric, Latin-letter, and Cyrillic-letter list buckets', () => {
+    expect(
+      extractExplicitJudgeBuckets('оцени:\n- кринж\n- кайф')?.map(({ text }) => text),
+    ).toEqual(['кринж', 'кайф']);
+    expect(
+      extractExplicitJudgeBuckets('1. база\n2. не база')?.map(({ text }) => text),
+    ).toEqual(['база', 'не база']);
+    expect(
+      extractExplicitJudgeBuckets('a) факт\nb) мнение')?.map(({ text }) => text),
+    ).toEqual(['факт', 'мнение']);
+    expect(
+      extractExplicitJudgeBuckets('а) добро\nб) зло')?.map(({ text }) => text),
+    ).toEqual(['добро', 'зло']);
+  });
+
+  it('requires at least two unique explicit buckets', () => {
+    expect(extractExplicitJudgeBuckets('- только один')).toBeNull();
+    expect(extractExplicitJudgeBuckets('кринж | КРИНЖ')).toBeNull();
   });
 
   it('builds a truth Noul with an explicit evidence boundary', () => {

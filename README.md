@@ -68,14 +68,17 @@ text:
 
 The Worker:
 
-1. extracts individual Unicode words from the `/judge` request;
-2. splits on whitespace and punctuation, never forming ngrams;
-3. removes a small list of obvious Russian and English stopwords;
-4. sends **one batched Noul question per candidate**, with the candidate and
+1. first checks for an explicit scale written as `a | b`, or as two or more
+   list lines prefixed by `-`, `1.`/`1)`, `a)`, or `а)`. Those items become
+   buckets verbatim, including multi-word labels, and skip Jev extraction;
+2. otherwise extracts individual Unicode words from the `/judge` request;
+3. splits on whitespace and punctuation, never forming ngrams;
+4. removes a small list of obvious Russian and English stopwords;
+5. sends **one batched Noul question per candidate**, with the candidate and
    request values in indexed structured state. Each question asks whether its
    candidate is a named category/bucket/scale value in the requested scale;
-5. keeps every candidate whose Noul probability is `>= 0.5`, in prompt order;
-6. sends a second closed Choice request that classifies the replied text among
+6. keeps every candidate whose Noul probability is `>= 0.5`, in prompt order;
+7. sends a closed Choice request that classifies the replied text among
    all selected buckets. With exactly one selected bucket, the options are that
    bucket and its explicit `не ...` counterpart.
 

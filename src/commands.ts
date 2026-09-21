@@ -291,6 +291,63 @@ export function tokenizeJudgeCandidates(text: string): WordCandidate[] {
   return candidates;
 }
 
+function explicitBucketCandidates(values: string[], source: string): WordCandidate[] | null {
+  if (values.length < 2 || values.length > MAX_CLASSIFY_OPTIONS) {
+    return null;
+  }
+
+  const result: WordCandidate[] = [];
+  const seen = new Set<string>();
+  let searchFrom = 0;
+  for (const rawValue of values) {
+    const text = rawValue.trim();
+    if (text.length === 0 || Array.from(text).length > MAX_CLASSIFY_OPTION_CHARS) {
+      return null;
+    }
+    const normalized = normalizeForComparison(text);
+    if (seen.has(normalized)) {
+      return null;
+    }
+    seen.add(normalized);
+    const foundAt = source.indexOf(text, searchFrom);
+    const start = foundAt >= 0 ? foundAt : searchFrom;
+    result.push({ text, normalized, start, end: start + text.length });
+    searchFrom = start + text.length;
+  }
+  return result;
+}
+
+/**
+ * Read an explicit user-authored scale without spending a Jev extraction call.
+ * Supported forms are `a | b`, and two or more list lines prefixed by `-`,
+ * `1.`/`1)`, or a Latin/Cyrillic letter plus `)`.
+ */
+export function extractExplicitJudgeBuckets(prompt: string): WordCandidate[] | null {
+  const source = prompt.trim();
+
+  if (source.includes('|')) {
+    const values = source.split('|').map((part, index) => {
+      const trimmed = part.trim();
+      if (index !== 0) {
+        return trimmed;
+      }
+      // Tolerate an introductory phrase: `оцени: кринж | кайф`.
+      const colon = trimmed.lastIndexOf(':');
+      return colon >= 0 ? trimmed.slice(colon + 1).trim() : trimmed;
+    });
+    return explicitBucketCandidates(values, source);
+  }
+
+  const values: string[] = [];
+  for (const line of source.split(/\r?\n/u)) {
+    const match = /^\s*(?:-|\d{1,3}[.)]|[\p{L}][)])\s+(.+?)\s*$/u.exec(line);
+    if (match?.[1]) {
+      values.push(match[1]);
+    }
+  }
+  return explicitBucketCandidates(values, source);
+}
+
 function criterionForOption(value: string): Record<string, string> {
   return {
     option: value,
